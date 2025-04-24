@@ -1,10 +1,10 @@
-import pandas as pd
 import re
 import string
 import emoji
+import numpy as np
+from collections import Counter
 
-df = pd.read_csv('data\cyberbullying_tweets.csv')
-df = df.rename(columns={'tweet_text': 'text', 'cyberbullying_type': 'sentiment'})
+# Препроцессинг функций
 
 def strip_emoji(text):
     return emoji.get_emoji_regexp().sub("", text)
@@ -23,7 +23,6 @@ def strip_all_entities(text):
 def clean_hashtags(tweet):
     new_tweet = re.sub(r'(\s+#[\w-]+)+\s*$', '', tweet).strip() 
     new_tweet = re.sub(r'#([\w-]+)', r'\1', new_tweet).strip()
-
     return new_tweet
 
 def filter_chars(text):
@@ -76,28 +75,23 @@ def clean_tweet(tweet):
     tweet = ' '.join(tweet.split())
     return tweet
 
-df['text_clean'] = [clean_tweet(tweet) for tweet in df['text']]
-df.drop_duplicates("text_clean", inplace=True)
-df = df[df["sentiment"]!="other_cyberbullying"]
-df['text_len'] = [len(text.split()) for text in df.text_clean]
+def Tokenize(column, seq_len):
+    corpus = [word for text in column for word in text.split()]
+    count_words = Counter(corpus)
+    sorted_words = count_words.most_common()
+    vocab_to_int = {w:i+1 for i, (w,c) in enumerate(sorted_words)}
 
-df = df[df["text_len"]<=16]
-df = df[df["text_len"]>0]
+    text_int = []
+    for text in column:
+        r = [vocab_to_int[word] for word in text.split()]
+        text_int.append(r)
+    features = np.zeros((len(text_int), seq_len), dtype = int)
+    for i, review in enumerate(text_int):
+        if len(review) <= seq_len:
+            zeros = list(np.zeros(seq_len - len(review)))
+            new = zeros + review
+        else:
+            new = review[: seq_len]
+        features[i, :] = np.array(new)
 
-def select_and_assign(df, categories, n_samples):
-    indices = []
-    for category in categories:
-        selected_idx = df[df['sentiment'] == category].sample(n=n_samples, random_state=1).index
-        indices.extend(selected_idx)
-    return df.loc[indices]
-
-cyberbullying_df = select_and_assign(df, ['religion', 'age', 'ethnicity', 'gender', 'not_cyberbullying'], 800)
-
-not_cyberbullying_df = df[df['sentiment'] == 'not_cyberbullying'].sample(n=3000, random_state=1)
-
-result_df = pd.concat([cyberbullying_df, not_cyberbullying_df], ignore_index=True)
-
-df = cyberbullying_df
-df['sentiment'] = df['sentiment'].replace({'cyberbullying':1,'not_cyberbullying':0})
-df['sentiment'] = df['sentiment'].replace({'religion':0,'age':1,'ethnicity':2,'gender':3,'not_cyberbullying':4})
-df.to_csv('preprocessed_data.csv', index=False)
+    return sorted_words, features
