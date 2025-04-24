@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import torch
-from classical_model import tokenizer, CyberbullyingDetector
+from classical_model_bert import tokenizer, CyberbullyingDetector
 
 max_len = 31
 
