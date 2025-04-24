@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.log
+.ipynb_checkpoints/
+*.csv
+*.pth
+*.h5
+*.pt
+*.pkl
+data/
